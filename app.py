@@ -1,48 +1,50 @@
-import pandas as pd
 import streamlit as st
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import requests
-from io import BytesIO
+import gdown
 
-# Function to download and load data from Google Drive
+# Set Streamlit page configuration
+st.set_page_config(page_title="Sentiment Analysis Dashboard", layout="wide")
+
+# Download CSV from Google Drive
 @st.cache_data
 def load_data():
-    file_id = '159TLOlDXH2Alvu4SgNG5iQiXUSSq2EdZ'
-    url = f'https://drive.google.com/uc?id={file_id}'
-    response = requests.get(url)
-    if response.status_code == 200:
-        df = pd.read_csv(BytesIO(response.content))
-        return df
-    else:
-        st.error("⚠️ ফাইল ডাউনলোড করতে সমস্যা হয়েছে। দয়া করে লিঙ্ক চেক করুন।")
-        return pd.DataFrame()
+    url = "https://drive.google.com/uc?id=YOUR_FILE_ID"  # <-- এখানে তোমার Google Drive file ID বসাও
+    output = "cleaned_data.csv"
+    gdown.download(url, output, quiet=False)
+    df = pd.read_csv(output)
+    df.columns = df.columns.str.strip()  # কলামের নাম থেকে স্পেস সরানো
+    return df
 
-# Load data
+# Load Data
 df = load_data()
 
-# Page title
+# Title
 st.title("📊 Sentiment Analysis Dashboard")
-st.write("এই ড্যাশবোর্ডে প্রোডাক্ট রিভিউয়ের উপর ভিত্তি করে Sentiment (positive, neutral, negative) বিশ্লেষণ করা হয়েছে।")
 
-# Show data
-st.subheader("🔍 Raw Data Preview")
-st.write(df.head())
+# Show dataframe
+with st.expander("🗃️ ডেটাসেট দেখুন"):
+    st.dataframe(df.head(20))
 
-# Show sentiment counts
-st.subheader("📈 Sentiment Count")
-sentiment_counts = df['Sentiment'].value_counts()
-st.bar_chart(sentiment_counts)
+# Sentiment Distribution
+st.subheader("🧠 Sentiment Distribution")
+if 'Sentiment' in df.columns:
+    sentiment_counts = df['Sentiment'].value_counts()
+    fig, ax = plt.subplots()
+    sns.barplot(x=sentiment_counts.index, y=sentiment_counts.values, ax=ax, palette="viridis")
+    ax.set_title("Sentiment Class Distribution")
+    ax.set_xlabel("Sentiment")
+    ax.set_ylabel("Count")
+    st.pyplot(fig)
+else:
+    st.error("⚠️ 'Sentiment' নামের কোনো কলাম পাওয়া যায়নি!")
 
-# Pie chart
-st.subheader("🧁 Sentiment Distribution (Pie Chart)")
-fig, ax = plt.subplots()
-ax.pie(sentiment_counts, labels=sentiment_counts.index, autopct='%1.1f%%', colors=['lightcoral', 'lightskyblue', 'lightgreen'])
-ax.axis('equal')
-st.pyplot(fig)
-
-# Optional filter
-st.subheader("🔎 Filtered Reviews by Sentiment")
-option = st.selectbox("একটি sentiment নির্বাচন করুন:", df['Sentiment'].unique())
-filtered_df = df[df['Sentiment'] == option]
-st.write(filtered_df[['Text', 'Sentiment']].reset_index(drop=True))
+# Text Length Distribution (Optional)
+if 'Text' in df.columns:
+    df['Text Length'] = df['Text'].astype(str).apply(len)
+    st.subheader("📝 টেক্সটের দৈর্ঘ্য")
+    fig2, ax2 = plt.subplots()
+    sns.histplot(df['Text Length'], bins=50, kde=True, ax=ax2, color="skyblue")
+    ax2.set_title("Text Length Distribution")
+    st.pyplot(fig2)
