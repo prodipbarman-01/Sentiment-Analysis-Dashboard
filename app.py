@@ -1,50 +1,47 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 import gdown
 
-# Set Streamlit page configuration
 st.set_page_config(page_title="Sentiment Analysis Dashboard", layout="wide")
 
-# Download CSV from Google Drive
-@st.cache_data
-def load_data():
-    url = "https://drive.google.com/uc?id=YOUR_FILE_ID"  # <-- এখানে তোমার Google Drive file ID বসাও
-    output = "cleaned_data.csv"
-    gdown.download(url, output, quiet=False)
-    df = pd.read_csv(output)
-    df.columns = df.columns.str.strip()  # কলামের নাম থেকে স্পেস সরানো
-    return df
-
-# Load Data
-df = load_data()
-
-# Title
 st.title("📊 Sentiment Analysis Dashboard")
 
-# Show dataframe
-with st.expander("🗃️ ডেটাসেট দেখুন"):
-    st.dataframe(df.head(20))
+@st.cache_data
+def load_data():
+    file_id = '1jm9pe3cVWE6LgF_YxDrxwg6a56oljQ2n'
+    url = f'https://drive.google.com/uc?id={file_id}'
+    output = 'cleaned_data.csv'
+    gdown.download(url, output, quiet=False)
+    df = pd.read_csv(output)
+    return df
 
-# Sentiment Distribution
-st.subheader("🧠 Sentiment Distribution")
-if 'Sentiment' in df.columns:
-    sentiment_counts = df['Sentiment'].value_counts()
-    fig, ax = plt.subplots()
-    sns.barplot(x=sentiment_counts.index, y=sentiment_counts.values, ax=ax, palette="viridis")
-    ax.set_title("Sentiment Class Distribution")
-    ax.set_xlabel("Sentiment")
-    ax.set_ylabel("Count")
-    st.pyplot(fig)
-else:
-    st.error("⚠️ 'Sentiment' নামের কোনো কলাম পাওয়া যায়নি!")
+df = load_data()
 
-# Text Length Distribution (Optional)
-if 'Text' in df.columns:
-    df['Text Length'] = df['Text'].astype(str).apply(len)
-    st.subheader("📝 টেক্সটের দৈর্ঘ্য")
-    fig2, ax2 = plt.subplots()
-    sns.histplot(df['Text Length'], bins=50, kde=True, ax=ax2, color="skyblue")
-    ax2.set_title("Text Length Distribution")
-    st.pyplot(fig2)
+st.markdown("### Dataset Preview")
+st.dataframe(df.head())
+
+# Show Sentiment Distribution
+st.markdown("### Sentiment Distribution")
+sentiment_counts = df['Sentiment'].value_counts()
+fig, ax = plt.subplots()
+sns.barplot(x=sentiment_counts.index, y=sentiment_counts.values, palette='viridis', ax=ax)
+ax.set_ylabel("Count")
+ax.set_xlabel("Sentiment")
+st.pyplot(fig)
+
+# Pie Chart
+st.markdown("### Sentiment Distribution Pie Chart")
+fig2, ax2 = plt.subplots()
+ax2.pie(sentiment_counts.values, labels=sentiment_counts.index, autopct='%1.1f%%', colors=sns.color_palette("viridis"))
+st.pyplot(fig2)
+
+# Word Count per Review
+st.markdown("### Review Word Count Distribution")
+df['word_count'] = df['Text'].apply(lambda x: len(str(x).split()))
+fig3, ax3 = plt.subplots()
+sns.histplot(df['word_count'], bins=30, kde=True, ax=ax3)
+ax3.set_xlabel("Word Count")
+ax3.set_ylabel("Number of Reviews")
+st.pyplot(fig3)
