@@ -1,43 +1,39 @@
-import pandas as pd
 import streamlit as st
-import plotly.express as px
+import pandas as pd
 
-st.set_page_config(page_title="Sentiment Dashboard", layout="wide")
+# Title of the app
+st.title('Sentiment Analysis of Reviews')
 
-# Load the cleaned CSV
-@st.cache_data
+# Load the cleaned data
 def load_data():
-    df = pd.read_csv("cleaned_reviews.csv")  # Ensure this file is in the same folder
+    df = pd.read_csv('cleaned_data.csv')  # Ensure your cleaned data is named 'cleaned_data.csv'
     return df
 
 df = load_data()
 
-# Title
-st.title("🧠 Sentiment Analysis Dashboard")
-st.markdown("Analyzing sentiments from product reviews")
+# Display the first few rows of the data
+st.write("### First few rows of the data", df.head())
 
-# Show data preview
-with st.expander("📄 Show Raw Data"):
-    st.dataframe(df)
+# Sentiment prediction (using a simple logic here; you can replace with your model)
+def predict_sentiment(text):
+    if 'bad' in text or 'poor' in text:
+        return 'negative'
+    elif 'good' in text or 'excellent' in text:
+        return 'positive'
+    else:
+        return 'neutral'
 
-# Count of Sentiments
-sentiment_counts = df['Sentiment'].value_counts().reset_index()
-sentiment_counts.columns = ['Sentiment', 'Count']
+# Apply sentiment prediction to review content
+df['Predicted_Sentiment'] = df['Text'].apply(predict_sentiment)
 
-# Pie chart
-fig1 = px.pie(sentiment_counts, values='Count', names='Sentiment',
-              title='Sentiment Distribution', color_discrete_sequence=px.colors.qualitative.Set3)
-st.plotly_chart(fig1, use_container_width=True)
+# Display the data with the predicted sentiments
+st.write("### Data with predicted sentiments", df[['Text', 'Predicted_Sentiment']])
 
-# Bar chart
-fig2 = px.bar(sentiment_counts, x='Sentiment', y='Count', color='Sentiment',
-              title='Sentiment Count Bar Chart', text='Count')
-st.plotly_chart(fig2, use_container_width=True)
+# Display summary statistics
+st.write("### Sentiment Distribution", df['Predicted_Sentiment'].value_counts())
 
-# Optional: Filter reviews by sentiment
-selected_sentiment = st.selectbox("🔍 Filter by Sentiment", options=df['Sentiment'].unique())
-filtered_reviews = df[df['Sentiment'] == selected_sentiment]
-
-st.subheader(f"📝 Sample '{selected_sentiment}' Reviews")
-st.write(filtered_reviews[['Text']].sample(min(5, len(filtered_reviews))))  # Show 5 or fewer
-
+# Allow user to input text for sentiment prediction
+user_input = st.text_area("Enter review text for sentiment prediction:")
+if user_input:
+    prediction = predict_sentiment(user_input)
+    st.write(f"Predicted Sentiment: {prediction}")
