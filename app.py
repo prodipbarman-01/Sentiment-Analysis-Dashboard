@@ -1,39 +1,48 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
+import seaborn as sns
+import matplotlib.pyplot as plt
+import requests
+from io import BytesIO
 
-# Title of the app
-st.title('Sentiment Analysis of Reviews')
-
-# Load the cleaned data
+# Function to download and load data from Google Drive
+@st.cache_data
 def load_data():
-    df = pd.read_csv('cleaned_data.csv')  # Ensure your cleaned data is named 'cleaned_data.csv'
-    return df
+    file_id = '159TLOlDXH2Alvu4SgNG5iQiXUSSq2EdZ'
+    url = f'https://drive.google.com/uc?id={file_id}'
+    response = requests.get(url)
+    if response.status_code == 200:
+        df = pd.read_csv(BytesIO(response.content))
+        return df
+    else:
+        st.error("⚠️ ফাইল ডাউনলোড করতে সমস্যা হয়েছে। দয়া করে লিঙ্ক চেক করুন।")
+        return pd.DataFrame()
 
+# Load data
 df = load_data()
 
-# Display the first few rows of the data
-st.write("### First few rows of the data", df.head())
+# Page title
+st.title("📊 Sentiment Analysis Dashboard")
+st.write("এই ড্যাশবোর্ডে প্রোডাক্ট রিভিউয়ের উপর ভিত্তি করে Sentiment (positive, neutral, negative) বিশ্লেষণ করা হয়েছে।")
 
-# Sentiment prediction (using a simple logic here; you can replace with your model)
-def predict_sentiment(text):
-    if 'bad' in text or 'poor' in text:
-        return 'negative'
-    elif 'good' in text or 'excellent' in text:
-        return 'positive'
-    else:
-        return 'neutral'
+# Show data
+st.subheader("🔍 Raw Data Preview")
+st.write(df.head())
 
-# Apply sentiment prediction to review content
-df['Predicted_Sentiment'] = df['Text'].apply(predict_sentiment)
+# Show sentiment counts
+st.subheader("📈 Sentiment Count")
+sentiment_counts = df['Sentiment'].value_counts()
+st.bar_chart(sentiment_counts)
 
-# Display the data with the predicted sentiments
-st.write("### Data with predicted sentiments", df[['Text', 'Predicted_Sentiment']])
+# Pie chart
+st.subheader("🧁 Sentiment Distribution (Pie Chart)")
+fig, ax = plt.subplots()
+ax.pie(sentiment_counts, labels=sentiment_counts.index, autopct='%1.1f%%', colors=['lightcoral', 'lightskyblue', 'lightgreen'])
+ax.axis('equal')
+st.pyplot(fig)
 
-# Display summary statistics
-st.write("### Sentiment Distribution", df['Predicted_Sentiment'].value_counts())
-
-# Allow user to input text for sentiment prediction
-user_input = st.text_area("Enter review text for sentiment prediction:")
-if user_input:
-    prediction = predict_sentiment(user_input)
-    st.write(f"Predicted Sentiment: {prediction}")
+# Optional filter
+st.subheader("🔎 Filtered Reviews by Sentiment")
+option = st.selectbox("একটি sentiment নির্বাচন করুন:", df['Sentiment'].unique())
+filtered_df = df[df['Sentiment'] == option]
+st.write(filtered_df[['Text', 'Sentiment']].reset_index(drop=True))
